@@ -37,6 +37,13 @@ class GitLogger
 					"' -n1 ".$hash;
 	}
 
+	private function getTagCommand( $hash )
+	{
+		return $this->binaryPath.
+					" describe --tags ".
+					$hash;
+	}
+
 	public function setCount( $count )
 	{
 		$this->logCount = (int)$count;
@@ -75,15 +82,25 @@ class GitLogger
 
 			$output = "";
 			exec( $this->getSingleCommand($hashes[$i], "%s\n%cn\n%at") , $output );
-			$commit['title'] = addslashes($output[0]);
-			$commit['author'] = addslashes($output[1]);
-			$commit['date'] = $output[2];
-			$commit['hash'] = $hashes[$i];
+			$commit['title'] = trim(addslashes($output[0]));
+			$commit['author'] = trim(addslashes($output[1]));
+			$commit['date'] = trim($output[2]);
+			$commit['hash'] = trim($hashes[$i]);
+
+			//	Tags
+			$tagOutput = '';
+			exec( $this->getTagCommand($hashes[$i]), $tagOutput );
+			$commit['tag'] = trim(addslashes($tagOutput[0]));
+
+			if (empty($commit['tag']) || strpos($commit['tag'], 'g'.$hashes[$i]) !== false) {
+				unset($commit['tag']);
+			}
+
 
 			foreach (static::$data as $key => $value) {
 				$output = "";
 				exec( $this->getSingleCommand($hashes[$i], $value) , $output );
-				$commit[$key] = addslashes(implode("\n", $output));
+				$commit[$key] = trim(addslashes(implode("\n", $output)));
 			}
 			
 			$this->commits[] = $commit;
